@@ -1,43 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {PriceConverter} from "./PriceConverter.sol";
 
 contract FundMe {
+    using PriceConverter for uint256;
+    uint256 minUSD=5e18; // 5 * 10^18 ;
+    address[] public funders;
+    mapping(address funder => uint256 amountFunded) public addressToAmountFunded; // funder & amountFunded are used to give more context to both sides of the mapping (they are not variables)
 
-    uint256 minUSD;
-    AggregatorV3Interface internal priceFeed;
-
-    constructor(){
-        /**
-        * Network: Sepolia
-        * Data Feed: ETH/USD (contract address to get value of ETH in USD)
-        * Address: 0x694AA1769357215DE4FAC081bf1f309aDC325306
-        */
-        priceFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
-        minUSD = 5e18;
-    }
 
     function fund() public payable {
-        require(getConversionRate(msg.value) >= minUSD, "Didn't send enough!!");   
+        require(msg.value.getConversionRate() >= minUSD, "Didn't send enough!!");   
+        funders.push(msg.sender);
+        addressToAmountFunded[msg.sender] = addressToAmountFunded[msg.sender] + msg.value;
     }
-
-    function getVersion() public view returns(uint256) {
-        return priceFeed.version();
-    }
-
-    function getPrice() public view returns(uint256){
-        // We need: Address of the contract, ABI (Interface) 
-        (,int256 ethInUSD,,,) = priceFeed.latestRoundData();
-        return uint256(ethInUSD * 1e10); // converting eth in wei
-    }
-
-    function getConversionRate(uint256 ethAmount) public view returns(uint256) {
-        uint256 ethPrice = getPrice();
-        uint ethAmountInUSD = (ethAmount * ethPrice) / 1e18;
-        return ethAmountInUSD;
-    }
-
-
     // function withdraw() {}
 }
